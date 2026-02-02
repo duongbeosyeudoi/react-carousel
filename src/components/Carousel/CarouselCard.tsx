@@ -10,6 +10,8 @@ interface CarouselCardProps {
   size: string;
   cardWidth: number;
   shouldLoad?: boolean; // Whether this image should be loaded
+  isCenter?: boolean; // Whether this card is the center card (desktop)
+  isDesktop?: boolean; // Whether we're on desktop
 }
 
 export function CarouselCard({
@@ -20,6 +22,8 @@ export function CarouselCard({
   size,
   cardWidth,
   shouldLoad = true,
+  isCenter = false,
+  isDesktop = false,
 }: CarouselCardProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(
     shouldLoad ? item.image : null,
@@ -49,6 +53,10 @@ export function CarouselCard({
     }
   };
 
+  // Calculate scale and opacity for desktop side cards
+  const scale = isDesktop && !isCenter ? 0.85 : 1; // Side cards are 85% size
+  const opacity = isDesktop && !isCenter ? 0.5 : 1; // Side cards have 50% opacity
+
   return (
     <div
       className="flex-shrink-0 cursor-pointer select-none"
@@ -57,6 +65,10 @@ export function CarouselCard({
         cursor: isDragging ? "grabbing" : "grab",
         width: `${cardWidth}px`,
         minWidth: `${cardWidth}px`,
+        transform: `scale(${scale})`,
+        opacity: opacity,
+        transition: "transform 0.3s ease-out, opacity 0.3s ease-out",
+        transformOrigin: "center center",
       }}
     >
       <div className="w-full h-full relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow">

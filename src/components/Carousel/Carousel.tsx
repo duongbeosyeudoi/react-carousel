@@ -82,27 +82,40 @@ export function Carousel({
   // Use container width if available, otherwise use prop viewportWidth
   const viewportWidth = containerWidth ?? propViewportWidth;
   const size = responsiveSize;
+  const isMobile = screen?.width ? screen.width < 640 : false;
 
   // Calculate card width from size if not explicitly provided
+  // For desktop: show 2.5 cards, so card width = viewportWidth / 2.5
   // Account for spacing between cards
-  const calculatedCardWidth =
-    cardWidth ??
-    (() => {
-      const [numerator, denominator] = size.split("/").map(Number);
-      if (isNaN(numerator) || isNaN(denominator) || denominator === 0) {
-        return DEFAULT_CARD_WIDTH;
-      }
-      // Calculate available width after accounting for spacing
-      // If showing N items, there are (N-1) gaps between them
-      const numberOfItems = denominator;
-      const totalSpacing = spacing * (numberOfItems - 1);
-      const availableWidth = viewportWidth - totalSpacing;
-      return availableWidth / denominator;
-    })();
+  const calculatedCardWidth = useMemo(() => {
+    if (cardWidth) {
+      return cardWidth;
+    }
+
+    // On desktop, show 2.5 cards
+    if (!isMobile && screen?.width && screen.width >= 640) {
+      // For 2.5 cards: viewportWidth = 2.5 * cardWidth + 1.5 * spacing
+      // Solving: cardWidth = (viewportWidth - 1.5 * spacing) / 2.5
+      const totalSpacing = spacing * 1.5; // 1 full gap + 0.5 gap
+      return (viewportWidth - totalSpacing) / 2.5;
+    }
+
+    // Mobile or fallback: use size prop
+    const [numerator, denominator] = size.split("/").map(Number);
+    if (isNaN(numerator) || isNaN(denominator) || denominator === 0) {
+      return DEFAULT_CARD_WIDTH;
+    }
+    // Calculate available width after accounting for spacing
+    // If showing N items, there are (N-1) gaps between them
+    const numberOfItems = denominator;
+    const totalSpacing = spacing * (numberOfItems - 1);
+    const availableWidth = viewportWidth - totalSpacing;
+    return availableWidth / denominator;
+  }, [cardWidth, isMobile, screen?.width, viewportWidth, spacing, size]);
   const viewModel = useCarouselViewModel(
     items,
     autoSlideInterval,
-    minDragDistance,
+    minDragDistance
   );
   const transitionTimeoutRef = useRef<number | null>(null);
 
@@ -110,7 +123,7 @@ export function Carousel({
   useEffect(() => {
     if (items.length === 0) return;
 
-    const { currentIndex, isDragging, dragOffset } = viewModel.state;
+    const { isDragging, dragOffset } = viewModel.state;
 
     // Only handle transitions when not dragging and offset is reset
     if (!isDragging && dragOffset === 0) {

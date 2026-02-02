@@ -52,7 +52,11 @@ function App() {
         </header>
 
         <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-8 mb-8">
-          <Carousel items={sampleData} size="1/3" spacing={16} />
+          <Carousel 
+            items={sampleData} 
+            viewportWidth={750}
+            spacing={16} 
+          />
         </div>
       </div>
     </div>

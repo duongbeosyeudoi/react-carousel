@@ -40,8 +40,16 @@ export function CarouselView({
   const prevIndexRef = useRef(currentIndex);
 
   // Create duplicated items for infinite loop
+  // Add extra duplicates at end for seamless 2.5 card view
   const duplicatedItems =
-    items.length > 0 ? [items[items.length - 1], ...items, items[0]] : [];
+    items.length > 0 
+      ? [
+          items[items.length - 1], // Duplicate last at start
+          ...items, // All real items
+          items[0], // Duplicate first at end
+          items[1] || items[0], // Duplicate second at end (for 2.5 card view)
+        ]
+      : [];
 
   // Calculate which images should be loaded based on visibility
   // Preload current + adjacent images (1 on each side) for smooth transitions
@@ -68,24 +76,49 @@ export function CarouselView({
     };
   }, [items.length, currentIndex, cardWidth, spacing, viewportWidth]);
 
+  // Check if desktop (viewportWidth >= 640 or screen width >= 640)
+  const isDesktop = viewportWidth >= 640 || (typeof window !== 'undefined' && window.innerWidth >= 640);
+
   // Calculate transform offset
   const getTransform = () => {
     if (items.length === 0) return "translateX(0px)";
 
     // Calculate the total width of one card including spacing
-    // CSS gap handles spacing between cards, so we need to account for it
     const cardWithSpacing = cardWidth + spacing;
 
-    // To position the current card at the start of the visible area:
-    // - We have a duplicate at index 0
-    // - Real cards start at index 1
-    // - Offset = -(currentIndex + 1) * cardWithSpacing to position current card at viewport start
-    // - The gap CSS property will automatically add spacing between cards
-    const baseOffset = -(currentIndex + 1) * cardWithSpacing;
-    // Add drag offset for smooth dragging
-    const totalOffset = baseOffset + dragOffset;
-
-    return `translateX(${totalOffset}px)`;
+    if (isDesktop) {
+      // Desktop: Center the current card, show 2.5 cards total
+      // Duplicated array: [lastItem, ...items, firstItem, secondItem]
+      // Real items start at index 1
+      
+      // Position of current card's left edge in duplicated array
+      let currentCardLeftPosition: number;
+      
+      // When at the last item, show it centered with first and second partially visible
+      if (currentIndex === items.length - 1) {
+        // Last real item is at index items.length
+        currentCardLeftPosition = items.length * cardWithSpacing;
+      } else {
+        // Standard positioning: real items start at index 1
+        currentCardLeftPosition = (currentIndex + 1) * cardWithSpacing;
+      }
+      
+      // Center offset: move card left by (viewportWidth/2 - cardWidth/2)
+      const centerOffset = viewportWidth / 2 - cardWidth / 2;
+      
+      // Base offset: position current card, then center it
+      const baseOffset = -currentCardLeftPosition + centerOffset;
+      
+      // Add drag offset for smooth dragging
+      const totalOffset = baseOffset + dragOffset;
+      
+      return `translateX(${totalOffset}px)`;
+    } else {
+      // Mobile: Standard left-aligned layout
+      const baseOffset = -(currentIndex + 1) * cardWithSpacing;
+      const totalOffset = baseOffset + dragOffset;
+      return `translateX(${totalOffset}px)`;
+    }
   };
 
   // Handle mouse/touch start
@@ -248,20 +281,38 @@ export function CarouselView({
           gap: `${spacing}px`,
         }}
       >
-        {duplicatedItems.map((item, index) => (
-          <CarouselCard
-            key={`${item.id}-${index}`}
-            item={item}
-            isDragging={isDragging}
-            hasDragged={hasDragged}
-            onClick={() => {
-              onCardClick(item.landing_page);
-            }}
-            size={size}
-            cardWidth={cardWidth}
-            shouldLoad={getShouldLoadImage(index)}
-          />
-        ))}
+        {duplicatedItems.map((item, index) => {
+          // Determine if this card is the center card (on desktop)
+          let isCenter = false;
+          if (isDesktop) {
+            // Duplicated array: [lastItem, ...items, firstItem, secondItem]
+            // Real items start at index 1
+            // Center card is at index currentIndex + 1
+            // When at last item, center card is at index items.length
+            if (currentIndex === items.length - 1) {
+              isCenter = index === items.length;
+            } else {
+              isCenter = index === currentIndex + 1;
+            }
+          }
+          
+          return (
+            <CarouselCard
+              key={`${item.id}-${index}`}
+              item={item}
+              isDragging={isDragging}
+              hasDragged={hasDragged}
+              onClick={() => {
+                onCardClick(item.landing_page);
+              }}
+              size={size}
+              cardWidth={cardWidth}
+              shouldLoad={getShouldLoadImage(index)}
+              isCenter={isCenter}
+              isDesktop={isDesktop}
+            />
+          );
+        })}
       </div>
     </div>
   );
